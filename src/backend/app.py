@@ -3,7 +3,6 @@ import os
 import sqlite3
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 
-# Настройка пути — сразу после стандартных импортов
 backend_dir = os.path.dirname(__file__)
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
@@ -24,7 +23,6 @@ def get_db_connection():
 def index():
     conn = get_db_connection()
     filter_param = request.args.get('filter', 'all')
-
     categories = conn.execute("SELECT * FROM categories").fetchall()
 
     if filter_param == 'active':
@@ -57,7 +55,6 @@ def index():
     total = len(tasks)
     completed = len([t for t in tasks if t['status'] == 'completed'])
     active = total - completed
-
     conn.close()
 
     return render_template(
@@ -127,7 +124,6 @@ def delete_task(task_id):
     return redirect(url_for('index'))
 
 
-# --- API Endpoints ---
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     conn = get_db_connection()
@@ -147,7 +143,10 @@ def api_get_tasks():
             "description": t["description"],
             "status": t["status"],
             "created_at": t["created_at"],
-            "category": {"id": t["category_id"], "name": t["category_name"]} if t["category_id"] else None
+            "category": (
+                {"id": t["category_id"], "name": t["category_name"]}
+                if t["category_id"] else None
+            )
         }
         for t in tasks
     ])
@@ -191,7 +190,10 @@ def api_create_task():
         "description": task["description"],
         "status": task["status"],
         "created_at": task["created_at"],
-        "category": {"id": task["category_id"], "name": task["category_name"]} if task["category_id"] else None
+        "category": (
+            {"id": task["category_id"], "name": task["category_name"]}
+            if task["category_id"] else None
+        )
     }), 201
 
 
@@ -216,7 +218,10 @@ def api_get_task(task_id):
         "description": task["description"],
         "status": task["status"],
         "created_at": task["created_at"],
-        "category": {"id": task["category_id"], "name": task["category_name"]} if task["category_id"] else None
+        "category": (
+            {"id": task["category_id"], "name": task["category_name"]}
+            if task["category_id"] else None
+        )
     })
 
 

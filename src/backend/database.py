@@ -2,6 +2,7 @@ import sqlite3
 
 DATABASE_PATH = "smart_todo.db"
 
+
 def init_db():
     """Инициализация базы данных: создание таблиц, если они не существуют"""
     conn = sqlite3.connect(DATABASE_PATH)
