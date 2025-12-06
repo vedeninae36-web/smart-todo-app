@@ -92,4 +92,3 @@ if __name__ == "__main__":
     
     # Запускаем с host=0.0.0.0 — ОБЯЗАТЕЛЬНО для облака
     app.run(debug=debug, host="0.0.0.0", port=port)
-    
