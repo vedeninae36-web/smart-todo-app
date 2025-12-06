@@ -37,7 +37,7 @@ def test_get_tasks(client):
 
     # Проверяем, что пришли задачи (из populate_test_data)
     assert len(data) >= 5  # минимум 5 задач
-    for task in data:
+    for task in 
         assert "id" in task
         assert "title" in task
         assert "status" in task
@@ -45,7 +45,7 @@ def test_get_tasks(client):
 
 def test_create_task(client):
     """Тестирует POST /api/tasks — создание новой задачи"""
-    new_task = {       
+    new_task = {
         "title": "Тестовая задача",
         "description": "Описание тестовой задачи",
         "category_id": 1,
@@ -124,4 +124,3 @@ def test_create_task_missing_title(client):
     data = json.loads(response.data)
     assert "error" in data
     assert "Title is required" in data["error"]
-    
