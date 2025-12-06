@@ -46,10 +46,12 @@ def test_get_tasks(client):
 def test_create_task(client):
     """Тестирует POST /api/tasks — создание новой задачи"""
     new_task = {
+        
         "title": "Тестовая задача",
         "description": "Описание тестовой задачи",
         "category_id": 1,
         "status": "pending",
+
     }
 
     response = client.post(
