@@ -32,17 +32,4 @@ jobs:
       - name: Run tests
         run: python -m pytest src/tests/ -v
 
-  build-and-push:
-    needs: test-and-lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build and push Docker image
-        run: |
-          docker build -t ghcr.io/${{ github.actor }}/smart-todo-app:${{ github.sha }} .
-          docker push ghcr.io/${{ github.actor }}/smart-todo-app:${{ github.sha }}
+ 
