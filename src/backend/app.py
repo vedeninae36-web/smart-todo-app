@@ -13,10 +13,12 @@ from database import DATABASE_PATH, init_db, populate_test_data
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Для flash-сообщений
 
+
 def get_db_connection():
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 @app.route('/')
 def index():
@@ -28,31 +30,37 @@ def index():
 
     # Формируем SQL-запрос в зависимости от фильтра
     if filter_param == 'active':
-        tasks = conn.execute("""
+        tasks = conn.execute(
+            """
             SELECT t.id, t.title, t.description, t.status, t.created_at,
                    c.id as category_id, c.name as category_name
             FROM tasks t
             LEFT JOIN categories c ON t.category_id = c.id
             WHERE t.status != 'completed'
             ORDER BY t.created_at DESC
-        """).fetchall()
+        """
+        ).fetchall()
     elif filter_param == 'completed':
-        tasks = conn.execute("""
+        tasks = conn.execute(
+            """
             SELECT t.id, t.title, t.description, t.status, t.created_at,
                    c.id as category_id, c.name as category_name
             FROM tasks t
             LEFT JOIN categories c ON t.category_id = c.id
             WHERE t.status = 'completed'
             ORDER BY t.created_at DESC
-        """).fetchall()
+        """
+        ).fetchall()
     else:  # all
-        tasks = conn.execute("""
+        tasks = conn.execute(
+            """
             SELECT t.id, t.title, t.description, t.status, t.created_at,
                    c.id as category_id, c.name as category_name
             FROM tasks t
             LEFT JOIN categories c ON t.category_id = c.id
             ORDER BY t.created_at DESC
-        """).fetchall()
+        """
+        ).fetchall()
 
     # Статистика
     total = len(tasks)
@@ -68,8 +76,9 @@ def index():
         total_tasks=total,
         completed_tasks=completed,
         active_tasks=active,
-        filter=filter_param
+        filter=filter_param,
     )
+
 
 @app.route('/tasks', methods=['POST'])
 def create_task():
@@ -83,15 +92,19 @@ def create_task():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO tasks (title, description, category_id, status)
         VALUES (?, ?, ?, ?)
-    """, (title, description, category_id, 'pending'))
+    """,
+        (title, description, category_id, 'pending'),
+    )
     conn.commit()
     conn.close()
 
     flash('Задача успешно добавлена!', 'success')
     return redirect(url_for('index'))
+
 
 @app.route('/tasks/<int:task_id>/toggle', methods=['POST'])
 def toggle_task(task_id):
@@ -113,6 +126,7 @@ def toggle_task(task_id):
     flash(f'Статус задачи изменён на "{new_status}"', 'info')
     return redirect(url_for('index'))
 
+
 @app.route('/tasks/<int:task_id>/delete', methods=['POST'])
 def delete_task(task_id):
     conn = get_db_connection()
@@ -124,30 +138,40 @@ def delete_task(task_id):
     flash('Задача удалена!', 'warning')
     return redirect(url_for('index'))
 
+
 # --- API Endpoints (оставляем для совместимости) ---
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     conn = get_db_connection()
-    tasks = conn.execute("""
+    tasks = conn.execute(
+        """
         SELECT t.id, t.title, t.description, t.status, t.created_at,
                c.id as category_id, c.name as category_name
         FROM tasks t
         LEFT JOIN categories c ON t.category_id = c.id
         ORDER BY t.created_at DESC
-    """).fetchall()
+    """
+    ).fetchall()
     conn.close()
 
-    return jsonify([
-        {
-            "id": t["id"],
-            "title": t["title"],
-            "description": t["description"],
-            "status": t["status"],
-            "created_at": t["created_at"],
-            "category": {"id": t["category_id"], "name": t["category_name"]} if t["category_id"] else None
-        }
-        for t in tasks
-    ])
+    return jsonify(
+        [
+            {
+                "id": t["id"],
+                "title": t["title"],
+                "description": t["description"],
+                "status": t["status"],
+                "created_at": t["created_at"],
+                "category": (
+                    {"id": t["category_id"], "name": t["category_name"]}
+                    if t["category_id"]
+                    else None
+                ),
+            }
+            for t in tasks
+        ]
+    )
+
 
 @app.route('/api/tasks', methods=['POST'])
 def api_create_task():
@@ -165,54 +189,80 @@ def api_create_task():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO tasks (title, description, category_id, status)
         VALUES (?, ?, ?, ?)
-    """, (title, description, category_id, status))
+    """,
+        (title, description, category_id, status),
+    )
     task_id = cursor.lastrowid
     conn.commit()
 
-    task = conn.execute("""
+    task = conn.execute(
+        """
         SELECT t.id, t.title, t.description, t.status, t.created_at,
                c.id as category_id, c.name as category_name
         FROM tasks t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.id = ?
-    """, (task_id,)).fetchone()
+    """,
+        (task_id,),
+    ).fetchone()
     conn.close()
 
-    return jsonify({
-        "id": task["id"],
-        "title": task["title"],
-        "description": task["description"],
-        "status": task["status"],
-        "created_at": task["created_at"],
-        "category": {"id": task["category_id"], "name": task["category_name"]} if task["category_id"] else None
-    }), 201
+    return (
+        jsonify(
+            {
+                "id": task["id"],
+                "title": task["title"],
+                "description": task["description"],
+                "status": task["status"],
+                "created_at": task["created_at"],
+                "category": (
+                    {"id": task["category_id"], "name": task["category_name"]}
+                    if task["category_id"]
+                    else None
+                ),
+            }
+        ),
+        201,
+    )
+
 
 @app.route('/api/tasks/<int:task_id>', methods=['GET'])
 def api_get_task(task_id):
     conn = get_db_connection()
-    task = conn.execute("""
+    task = conn.execute(
+        """
         SELECT t.id, t.title, t.description, t.status, t.created_at,
                c.id as category_id, c.name as category_name
         FROM tasks t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.id = ?
-    """, (task_id,)).fetchone()
+    """,
+        (task_id,),
+    ).fetchone()
     conn.close()
 
     if task is None:
         return jsonify({"error": "Task not found"}), 404
 
-    return jsonify({
-        "id": task["id"],
-        "title": task["title"],
-        "description": task["description"],
-        "status": task["status"],
-        "created_at": task["created_at"],
-        "category": {"id": task["category_id"], "name": task["category_name"]} if task["category_id"] else None
-    })
+    return jsonify(
+        {
+            "id": task["id"],
+            "title": task["title"],
+            "description": task["description"],
+            "status": task["status"],
+            "created_at": task["created_at"],
+            "category": (
+                {"id": task["category_id"], "name": task["category_name"]}
+                if task["category_id"]
+                else None
+            ),
+        }
+    )
+
 
 if __name__ == '__main__':
     init_db()

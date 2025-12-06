@@ -4,21 +4,25 @@ import os
 # Путь к базе данных (можно изменить при необходимости)
 DATABASE_PATH = "smart_todo.db"
 
+
 def init_db():
     """Инициализация базы данных: создание таблиц, если они не существуют"""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     # Создание таблицы категорий
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE
         )
-    """)
+    """
+    )
 
     # Создание таблицы задач
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -28,7 +32,8 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL
         )
-    """)
+    """
+    )
 
     conn.commit()
     conn.close()
@@ -41,11 +46,7 @@ def populate_test_data():
     cursor = conn.cursor()
 
     # Вставка категорий
-    categories = [
-        ("Работа",),
-        ("Учёба",),
-        ("Личное",)
-    ]
+    categories = [("Работа",), ("Учёба",), ("Личное",)]
     cursor.executemany("INSERT OR IGNORE INTO categories (name) VALUES (?)", categories)
 
     # Получаем ID категорий
@@ -54,17 +55,30 @@ def populate_test_data():
 
     # Вставка задач
     tasks = [
-        ("Подготовить презентацию", "Крайний срок — завтра", category_map["Работа"], "pending"),
+        (
+            "Подготовить презентацию",
+            "Крайний срок — завтра",
+            category_map["Работа"],
+            "pending",
+        ),
         ("Прочитать главу 5", "По курсу Python", category_map["Учёба"], "in_progress"),
         ("Позвонить маме", "Обсудить выходные", category_map["Личное"], "pending"),
-        ("Написать отчёт по проекту", "Отправить руководителю", category_map["Работа"], "completed"),
+        (
+            "Написать отчёт по проекту",
+            "Отправить руководителю",
+            category_map["Работа"],
+            "completed",
+        ),
         ("Сделать домашнее задание", "По алгоритмам", category_map["Учёба"], "pending"),
     ]
 
-    cursor.executemany("""
+    cursor.executemany(
+        """
         INSERT INTO tasks (title, description, category_id, status)
         VALUES (?, ?, ?, ?)
-    """, tasks)
+    """,
+        tasks,
+    )
 
     conn.commit()
     conn.close()
