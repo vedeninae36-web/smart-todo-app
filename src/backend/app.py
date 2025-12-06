@@ -3,7 +3,10 @@ import sqlite3
 import os
 
 # Импортируем функции из database.py
-from .database import DATABASE_PATH
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+from database import DATABASE_PATH
 
 app = Flask(__name__)
 
