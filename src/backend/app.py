@@ -1,235 +1,81 @@
-import sys
 import os
-import sqlite3
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+import sys
+from flask import Flask, render_template, request, redirect, url_for
 
-backend_dir = os.path.dirname(__file__)
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+# Явное указание пути к шаблонам — решает проблему с кириллицей в Windows
+if sys.platform == "win32":
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    template_dir = os.path.join(base_dir, 'templates')
+    template_dir = os.path.normpath(template_dir)
+else:
+    template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 
-from database import DATABASE_PATH, init_db, populate_test_data
+# Отладочный вывод (можно удалить после проверки)
+print(">>> Путь к шаблонам:", template_dir)
+print(">>> tasks_list.html существует?", os.path.isfile(os.path.join(template_dir, 'tasks_list.html')))
 
-app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+# Создаём приложение с явным указанием папки шаблонов
+app = Flask(__name__, template_folder=template_dir)
 
+# Временное хранилище задач
+tasks = []
 
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+def get_next_id():
+    return max((t["id"] for t in tasks), default=0) + 1
 
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    filter_param = request.args.get('filter', 'all')
-    categories = conn.execute("SELECT * FROM categories").fetchall()
-
-    if filter_param == 'active':
-        tasks = conn.execute("""
-            SELECT t.id, t.title, t.description, t.status, t.created_at,
-                   c.id as category_id, c.name as category_name
-            FROM tasks t
-            LEFT JOIN categories c ON t.category_id = c.id
-            WHERE t.status != 'completed'
-            ORDER BY t.created_at DESC
-        """).fetchall()
-    elif filter_param == 'completed':
-        tasks = conn.execute("""
-            SELECT t.id, t.title, t.description, t.status, t.created_at,
-                   c.id as category_id, c.name as category_name
-            FROM tasks t
-            LEFT JOIN categories c ON t.category_id = c.id
-            WHERE t.status = 'completed'
-            ORDER BY t.created_at DESC
-        """).fetchall()
+    filter_type = request.args.get('filter', 'all')
+    if filter_type == 'active':
+        displayed_tasks = [t for t in tasks if not t['completed']]
+    elif filter_type == 'completed':
+        displayed_tasks = [t for t in tasks if t['completed']]
     else:
-        tasks = conn.execute("""
-            SELECT t.id, t.title, t.description, t.status, t.created_at,
-                   c.id as category_id, c.name as category_name
-            FROM tasks t
-            LEFT JOIN categories c ON t.category_id = c.id
-            ORDER BY t.created_at DESC
-        """).fetchall()
+        displayed_tasks = tasks
+        filter_type = 'all'
 
-    total = len(tasks)
-    completed = len([t for t in tasks if t['status'] == 'completed'])
-    active = total - completed
-    conn.close()
+    stats = {
+        'total': len(tasks),
+        'completed': sum(1 for t in tasks if t['completed']),
+        'active': len(tasks) - sum(1 for t in tasks if t['completed'])
+    }
 
     return render_template(
         'tasks_list.html',
-        tasks=tasks,
-        categories=categories,
-        total_tasks=total,
-        completed_tasks=completed,
-        active_tasks=active,
-        filter=filter_param
+        tasks=displayed_tasks,
+        current_filter=filter_type,
+        stats=stats
     )
-
 
 @app.route('/tasks', methods=['POST'])
 def create_task():
-    title = request.form.get('title')
-    description = request.form.get('description', '')
-    category_id = request.form.get('category_id') or None
-
-    if not title:
-        flash('Название задачи обязательно!', 'danger')
-        return redirect(url_for('index'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO tasks (title, description, category_id, status)
-        VALUES (?, ?, ?, ?)
-    """, (title, description, category_id, 'pending'))
-    conn.commit()
-    conn.close()
-
-    flash('Задача успешно добавлена!', 'success')
+    title = request.form.get('title', '').strip()
+    priority = request.form.get('priority', 'low')
+    if title:
+        tasks.append({
+            "id": get_next_id(),
+            "title": title,
+            "priority": priority,
+            "completed": False
+        })
     return redirect(url_for('index'))
-
 
 @app.route('/tasks/<int:task_id>/toggle', methods=['POST'])
 def toggle_task(task_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT status FROM tasks WHERE id = ?", (task_id,))
-    task = cursor.fetchone()
-
-    if not task:
-        flash('Задача не найдена!', 'danger')
-        conn.close()
-        return redirect(url_for('index'))
-
-    new_status = 'completed' if task['status'] != 'completed' else 'pending'
-    cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (new_status, task_id))
-    conn.commit()
-    conn.close()
-
-    flash(f'Статус задачи изменён на "{new_status}"', 'info')
+    for task in tasks:
+        if task['id'] == task_id:
+            task['completed'] = not task['completed']
+            break
     return redirect(url_for('index'))
-
 
 @app.route('/tasks/<int:task_id>/delete', methods=['POST'])
 def delete_task(task_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
-    conn.commit()
-    conn.close()
-
-    flash('Задача удалена!', 'warning')
+    global tasks
+    tasks = [t for t in tasks if t['id'] != task_id]
     return redirect(url_for('index'))
 
-
-@app.route('/api/tasks', methods=['GET'])
-def api_get_tasks():
-    conn = get_db_connection()
-    tasks = conn.execute("""
-        SELECT t.id, t.title, t.description, t.status, t.created_at,
-               c.id as category_id, c.name as category_name
-        FROM tasks t
-        LEFT JOIN categories c ON t.category_id = c.id
-        ORDER BY t.created_at DESC
-    """).fetchall()
-    conn.close()
-
-    return jsonify([
-        {
-            "id": t["id"],
-            "title": t["title"],
-            "description": t["description"],
-            "status": t["status"],
-            "created_at": t["created_at"],
-            "category": (
-                {"id": t["category_id"], "name": t["category_name"]}
-                if t["category_id"] else None
-            )
-        }
-        for t in tasks
-    ])
-
-
-@app.route('/api/tasks', methods=['POST'])
-def api_create_task():
-    data = request.get_json()
-    if not data or 'title' not in data:
-        return jsonify({"error": "Title is required"}), 400
-
-    title = data['title']
-    description = data.get('description', '')
-    category_id = data.get('category_id')
-    status = data.get('status', 'pending')
-
-    if status not in ('pending', 'in_progress', 'completed'):
-        return jsonify({"error": "Invalid status"}), 400
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO tasks (title, description, category_id, status)
-        VALUES (?, ?, ?, ?)
-    """, (title, description, category_id, status))
-    task_id = cursor.lastrowid
-    conn.commit()
-
-    task = conn.execute("""
-        SELECT t.id, t.title, t.description, t.status, t.created_at,
-               c.id as category_id, c.name as category_name
-        FROM tasks t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.id = ?
-    """, (task_id,)).fetchone()
-    conn.close()
-
-    return jsonify({
-        "id": task["id"],
-        "title": task["title"],
-        "description": task["description"],
-        "status": task["status"],
-        "created_at": task["created_at"],
-        "category": (
-            {"id": task["category_id"], "name": task["category_name"]}
-            if task["category_id"] else None
-        )
-    }), 201
-
-
-@app.route('/api/tasks/<int:task_id>', methods=['GET'])
-def api_get_task(task_id):
-    conn = get_db_connection()
-    task = conn.execute("""
-        SELECT t.id, t.title, t.description, t.status, t.created_at,
-               c.id as category_id, c.name as category_name
-        FROM tasks t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.id = ?
-    """, (task_id,)).fetchone()
-    conn.close()
-
-    if task is None:
-        return jsonify({"error": "Task not found"}), 404
-
-    return jsonify({
-        "id": task["id"],
-        "title": task["title"],
-        "description": task["description"],
-        "status": task["status"],
-        "created_at": task["created_at"],
-        "category": (
-            {"id": task["category_id"], "name": task["category_name"]}
-            if task["category_id"] else None
-        )
-    })
-
-
 if __name__ == '__main__':
-    init_db()
-    try:
-        populate_test_data()
-    except Exception as e:
-        print(f"⚠️ Ошибка при заполнении тестовыми данными: {e}")
-
+    # Добавляем тестовую задачу
+    if not tasks:
+        tasks.append({"id": 1, "title": "✅ Всё работает! Можно добавлять свои задачи.", "priority": "medium", "completed": False})
     app.run(debug=True, host='0.0.0.0', port=5000)
