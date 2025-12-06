@@ -1,42 +1,40 @@
 import os
 import sys
-import tempfile
 import json
 import pytest
 
-# Добавляем корень проекта в sys.path, чтобы импортировать backend
-ROOT_DIR = os.path.join(os.path.dirname(__file__), '..', '..')
-ROOT_DIR = os.path.abspath(ROOT_DIR)
+# Добавляем корень проекта в sys.path
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, ROOT_DIR)
 
-from backend.app import app
-from backend.database import init_db, populate_test_data
+# Импортируем ДО создания приложения
+from backend import database
 
 # Путь к тестовой БД
 TEST_DB_PATH = "test_smart_todo.db"
 
+# Подменяем путь к БД ГЛОБАЛЬНО в модуле database
+database.DATABASE_PATH = TEST_DB_PATH
+
+# Теперь импортируем app — он будет использовать TEST_DB_PATH
+from backend.app import app
+
 @pytest.fixture(scope="module")
 def client():
-    """Создаёт клиент Flask для тестирования"""
-    # Заменяем путь к БД на тестовую
-    from backend.database import DATABASE_PATH
-    original_db = DATABASE_PATH
-    DATABASE_PATH = TEST_DB_PATH
-
-    # Сохраняем оригинальный путь (хотя в тестах мы его перезапишем)
+    """Создаёт клиент Flask для тестирования с изолированной БД"""
     # Инициализируем тестовую БД
-    init_db()
-    populate_test_data()
+    database.init_db()
+    database.populate_test_data()
 
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
 
-    # Очистка после тестов
+    # Очистка
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
 
-# ... остальные тесты остаются без изменений
+# === Тесты ===
 def test_get_tasks(client):
     response = client.get('/api/tasks')
     assert response.status_code == 200
@@ -63,7 +61,9 @@ def test_create_task(client):
 
 def test_get_task_by_id(client):
     response = client.get('/api/tasks')
-    first_task = json.loads(response.data)[0]
+    tasks = json.loads(response.data)
+    assert len(tasks) > 0
+    first_task = tasks[0]
     response2 = client.get(f'/api/tasks/{first_task["id"]}')
     assert response2.status_code == 200
     data = json.loads(response2.data)
