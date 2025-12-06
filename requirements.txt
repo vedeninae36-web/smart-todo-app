@@ -1,2 +1,4 @@
 flask==2.3.3
 pytest==7.4.0
+flake8==6.1.0
+black==24.10.0
