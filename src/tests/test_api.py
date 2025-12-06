@@ -37,7 +37,7 @@ def test_get_tasks(client):
 
     # Проверяем, что пришли задачи (из populate_test_data)
     assert len(data) >= 5  # минимум 5 задач
-    for task in 
+    for task in data:
         assert "id" in task
         assert "title" in task
         assert "status" in task
