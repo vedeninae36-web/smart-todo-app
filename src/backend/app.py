@@ -79,7 +79,7 @@ if __name__ == "__main__":
         tasks.append(
             {
                 "id": 1,
-                "title": "✅ Всё работает!",
+                "title": " Всё работает!",
                 "priority": "medium",
                 "completed": False,
             }
