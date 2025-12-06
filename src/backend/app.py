@@ -103,10 +103,10 @@ if __name__ == "__main__":
                 "completed": False,
             }
         )
-    
+
     # Получаем порт от Render (или 5000 локально)
     port = int(os.environ.get("PORT", "5000"))
     debug = os.environ.get("FLASK_ENV") == "production"
-    
+
     # Запускаем приложение
     app.run(debug=debug, host="0.0.0.0", port=port)
