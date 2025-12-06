@@ -1,23 +1,13 @@
-import os
-import sys
 from flask import Flask, render_template, request, redirect, url_for
+from pathlib import Path
 
-# Явное указание пути к шаблонам — решает проблему с кириллицей в Windows
-if sys.platform == "win32":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    template_dir = os.path.join(base_dir, 'templates')
-    template_dir = os.path.normpath(template_dir)
-else:
-    template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+# Настройка приложения
+base_dir = Path(__file__).parent.resolve()
+template_dir = base_dir / "templates"
 
-# Отладочный вывод (можно удалить после проверки)
-print(">>> Путь к шаблонам:", template_dir)
-print(">>> tasks_list.html существует?", os.path.isfile(os.path.join(template_dir, 'tasks_list.html')))
+app = Flask(__name__, template_folder=str(template_dir))
 
-# Создаём приложение с явным указанием папки шаблонов
-app = Flask(__name__, template_folder=template_dir)
-
-# Временное хранилище задач
+# Глобальное хранилище задач — ОБЯЗАТЕЛЬНО здесь!
 tasks = []
 
 def get_next_id():
@@ -74,8 +64,8 @@ def delete_task(task_id):
     tasks = [t for t in tasks if t['id'] != task_id]
     return redirect(url_for('index'))
 
+# Только для запуска — не влияет на тесты
 if __name__ == '__main__':
-    # Добавляем тестовую задачу
     if not tasks:
-        tasks.append({"id": 1, "title": "✅ Всё работает! Можно добавлять свои задачи.", "priority": "medium", "completed": False})
+        tasks.append({"id": 1, "title": "✅ Всё работает!", "priority": "medium", "completed": False})
     app.run(debug=True, host='0.0.0.0', port=5000)
