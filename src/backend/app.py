@@ -84,11 +84,11 @@ if __name__ == "__main__":
                 "completed": False,
             }
         )
-    
+
     # Получаем порт из окружения (Render передаёт PORT)
     port = int(os.environ.get("PORT", 5000))
     # Отключаем debug в продакшене
     debug = os.environ.get("FLASK_ENV") != "production"
-    
+
     # Запускаем с host=0.0.0.0 — ОБЯЗАТЕЛЬНО для облака
     app.run(debug=debug, host="0.0.0.0", port=port)
