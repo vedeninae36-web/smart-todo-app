@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for
 from pathlib import Path
 
@@ -7,7 +8,7 @@ template_dir = base_dir / "templates"
 
 app = Flask(__name__, template_folder=str(template_dir))
 
-# Глобальное хранилище задач — ОБЯЗАТЕЛЬНО здесь!
+# Глобальное хранилище задач
 tasks = []
 
 
@@ -72,8 +73,8 @@ def delete_task(task_id):
     return redirect(url_for("index"))
 
 
-# Только для запуска — не влияет на тесты
 if __name__ == "__main__":
+    # Добавляем тестовую задачу при первом запуске
     if not tasks:
         tasks.append(
             {
@@ -83,4 +84,12 @@ if __name__ == "__main__":
                 "completed": False,
             }
         )
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    
+    # Получаем порт из окружения (Render передаёт PORT)
+    port = int(os.environ.get("PORT", 5000))
+    # Отключаем debug в продакшене
+    debug = os.environ.get("FLASK_ENV") != "production"
+    
+    # Запускаем с host=0.0.0.0 — ОБЯЗАТЕЛЬНО для облака
+    app.run(debug=debug, host="0.0.0.0", port=port)
+    
