@@ -44,11 +44,36 @@ def populate_test_data():
     category_map = {name: id for id, name in cursor.fetchall()}
 
     tasks = [
-        ("Подготовить презентацию", "Крайний срок — завтра", category_map["Работа"], "pending"),
-        ("Прочитать главу 5", "По курсу Python", category_map["Учёба"], "in_progress"),
-        ("Позвонить маме", "Обсудить выходные", category_map["Личное"], "pending"),
-        ("Написать отчёт по проекту", "Отправить руководителю", category_map["Работа"], "completed"),
-        ("Сделать домашнее задание", "По алгоритмам", category_map["Учёба"], "pending"),
+        (
+            "Подготовить презентацию",
+            "Крайний срок — завтра",
+            category_map["Работа"],
+            "pending"
+        ),
+        (
+            "Прочитать главу 5",
+            "По курсу Python",
+            category_map["Учёба"],
+            "in_progress"
+        ),
+        (
+            "Позвонить маме",
+            "Обсудить выходные",
+            category_map["Личное"],
+            "pending"
+        ),
+        (
+            "Написать отчёт по проекту",
+            "Отправить руководителю",
+            category_map["Работа"],
+            "completed"
+        ),
+        (
+            "Сделать домашнее задание",
+            "По алгоритмам",
+            category_map["Учёба"],
+            "pending"
+        ),
     ]
 
     cursor.executemany("""
